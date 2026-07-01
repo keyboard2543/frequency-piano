@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#18181b">
+    <link rel="manifest" href="manifest.json">
     <title>Frequency Piano • keyboard2543</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -166,6 +168,14 @@
             </div>
             
             <div class="flex items-center gap-x-3">
+                <!-- PWA / Fullscreen Buttons -->
+                <button id="install-btn" class="hidden items-center justify-center w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition-colors" title="ติดตั้งแอป (Install App)">
+                    <i class="fa-solid fa-download text-xs"></i>
+                </button>
+                <button id="fullscreen-btn" onclick="toggleFullScreen()" class="items-center justify-center w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-zinc-300 transition-colors" title="เต็มจอ (Fullscreen)">
+                    <i class="fa-solid fa-expand text-xs"></i>
+                </button>
+
                 <!-- Language Switcher -->
                 <div class="relative">
                     <select id="language-select" 
@@ -439,14 +449,18 @@
                     `;
                     
                     keyEl.addEventListener('click', () => {
-                        playPianoKey(key, keyEl);
+                        if (!isTouchingKey) {
+                            playPianoKey(key, keyEl);
+                        }
                     });
                     
                     // Touch support (better feedback)
                     keyEl.addEventListener('touchstart', (e) => {
-                        e.preventDefault();
+                        // Allow default scroll behavior (remove e.preventDefault())
+                        isTouchingKey = true;
                         playPianoKey(key, keyEl);
-                    }, { passive: false });
+                        setTimeout(() => isTouchingKey = false, 300);
+                    }, { passive: true });
                     
                     container.appendChild(keyEl);
                     currentLeft += whiteWidth + 1;
@@ -466,13 +480,17 @@
                     `;
                     
                     keyEl.addEventListener('click', () => {
-                        playPianoKey(key, keyEl);
+                        if (!isTouchingKey) {
+                            playPianoKey(key, keyEl);
+                        }
                     });
                     
                     keyEl.addEventListener('touchstart', (e) => {
-                        e.preventDefault();
+                        // Allow default scroll behavior (remove e.preventDefault())
+                        isTouchingKey = true;
                         playPianoKey(key, keyEl);
-                    }, { passive: false });
+                        setTimeout(() => isTouchingKey = false, 300);
+                    }, { passive: true });
                     
                     container.appendChild(keyEl);
                     // Do NOT advance currentLeft for black keys
@@ -485,6 +503,7 @@
         }
 
         let lastPlayedKeyEl = null;
+        let isTouchingKey = false;
 
         function playPianoKey(keyData, keyElement) {
             // Play sound
@@ -959,6 +978,83 @@
             }
             
             console.log('%c[Piano Frequency] App initialized successfully. C4-C6 piano ready.', 'color:#64748b');
+        }
+
+        // --- PWA & Fullscreen logic ---
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('ServiceWorker registered:', reg.scope))
+                    .catch(err => console.log('ServiceWorker error:', err));
+            });
+        }
+
+        // Handle Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBtn = document.getElementById('install-btn');
+            installBtn.classList.remove('hidden');
+            installBtn.classList.add('flex');
+
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        installBtn.classList.add('hidden');
+                        installBtn.classList.remove('flex');
+                    }
+                    deferredPrompt = null;
+                }
+            });
+        });
+
+        // Fullscreen Toggle
+        function toggleFullScreen() {
+            if (!document.fullscreenElement &&    // alternative standard method
+                !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {  // current working methods
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                    document.documentElement.msRequestFullscreen();
+                } else if (document.documentElement.mozRequestFullScreen) {
+                    document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        }
+
+        // Update Fullscreen Icon based on state
+        document.addEventListener('fullscreenchange', updateFullscreenIcon);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+        document.addEventListener('mozfullscreenchange', updateFullscreenIcon);
+        document.addEventListener('MSFullscreenChange', updateFullscreenIcon);
+
+        function updateFullscreenIcon() {
+            const btn = document.getElementById('fullscreen-btn');
+            const icon = btn.querySelector('i');
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+                icon.classList.remove('fa-expand');
+                icon.classList.add('fa-compress');
+            } else {
+                icon.classList.remove('fa-compress');
+                icon.classList.add('fa-expand');
+            }
         }
 
         // Boot app
