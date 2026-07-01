@@ -17,6 +17,7 @@
         
         body {
             font-family: 'Inter', system_ui, sans-serif;
+            overscroll-behavior: none; /* Prevent elastic bounce on mobile */
         }
         
         .title-font {
@@ -37,7 +38,7 @@
             position: relative;
             height: 240px;
             user-select: none;
-            touch-action: manipulation;
+            touch-action: pan-x; /* Allow horizontal scroll, explicitly prevent vertical scroll (ห้ามขยับ) */
         }
 
         .white-key {
@@ -246,7 +247,25 @@
                             <i class="fa-solid fa-info-circle"></i>
                             <span>เลื่อนซ้ายขวาเพื่อดูคีย์เพิ่มเติม (บนมือถือ)</span>
                         </div>
-                        <div class="font-mono hidden sm:block">C4 — C6</div>
+                        <div class="font-mono hidden sm:block">C2 — C8</div>
+                    </div>
+                </div>
+
+                <!-- Touch Mode Switcher (Scroll vs Glissando) -->
+                <div class="flex justify-center mt-6">
+                    <div class="inline-flex bg-zinc-900 border border-zinc-800 p-1 rounded-3xl shadow-inner">
+                        <button onclick="setTouchMode('scroll')"
+                                id="btn-touch-scroll"
+                                class="touch-mode-btn active flex items-center gap-x-2 px-4 py-1.5 text-xs font-semibold rounded-[22px] bg-zinc-700 text-white shadow transition-colors">
+                            <i class="fa-solid fa-arrows-left-right"></i>
+                            <span id="label-scroll">เลื่อน (Scroll)</span>
+                        </button>
+                        <button onclick="setTouchMode('glissando')"
+                                id="btn-touch-glissando"
+                                class="touch-mode-btn flex items-center gap-x-2 px-4 py-1.5 text-xs font-semibold rounded-[22px] text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors">
+                            <i class="fa-solid fa-hand-pointer"></i>
+                            <span id="label-glissando">ลากเสียง (Glissando)</span>
+                        </button>
                     </div>
                 </div>
 
@@ -406,7 +425,7 @@
             pianoKeys = [];
             const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
             
-            for (let midi = 60; midi <= 84; midi++) { // C4 (60) to C6 (84)
+            for (let midi = 36; midi <= 108; midi++) { // C2 (36) to C8 (108)
                 const freq = 440 * Math.pow(2, (midi - 69) / 12);
                 const noteIndex = midi % 12;
                 const octave = Math.floor(midi / 12) - 1;
@@ -461,6 +480,11 @@
                         playPianoKey(key, keyEl);
                         setTimeout(() => isTouchingKey = false, 300);
                     }, { passive: true });
+
+                    // Glissando support
+                    keyEl.addEventListener('glissando-play', () => {
+                        playPianoKey(key, keyEl);
+                    });
                     
                     container.appendChild(keyEl);
                     currentLeft += whiteWidth + 1;
@@ -491,6 +515,11 @@
                         playPianoKey(key, keyEl);
                         setTimeout(() => isTouchingKey = false, 300);
                     }, { passive: true });
+
+                    // Glissando support
+                    keyEl.addEventListener('glissando-play', () => {
+                        playPianoKey(key, keyEl);
+                    });
                     
                     container.appendChild(keyEl);
                     // Do NOT advance currentLeft for black keys
@@ -500,10 +529,67 @@
             // Set container width to fit all
             const totalWidth = currentLeft + 8;
             container.style.minWidth = totalWidth + 'px';
+
+            // Attach glissando handlers to container
+            container.addEventListener('touchmove', handleGlissandoTouch, { passive: false });
+            container.addEventListener('touchend', handleGlissandoEnd);
+            container.addEventListener('touchcancel', handleGlissandoEnd);
         }
 
         let lastPlayedKeyEl = null;
         let isTouchingKey = false;
+        let currentTouchMode = 'scroll';
+
+        function setTouchMode(mode) {
+            currentTouchMode = mode;
+            const btnScroll = document.getElementById('btn-touch-scroll');
+            const btnGlissando = document.getElementById('btn-touch-glissando');
+            const piano = document.getElementById('keyboard');
+
+            if (mode === 'scroll') {
+                btnScroll.classList.add('bg-zinc-700', 'text-white', 'shadow');
+                btnScroll.classList.remove('text-zinc-400', 'hover:bg-zinc-800');
+                btnGlissando.classList.remove('bg-zinc-700', 'text-white', 'shadow');
+                btnGlissando.classList.add('text-zinc-400', 'hover:bg-zinc-800');
+                piano.style.touchAction = 'pan-x';
+            } else {
+                btnGlissando.classList.add('bg-zinc-700', 'text-white', 'shadow');
+                btnGlissando.classList.remove('text-zinc-400', 'hover:bg-zinc-800');
+                btnScroll.classList.remove('bg-zinc-700', 'text-white', 'shadow');
+                btnScroll.classList.add('text-zinc-400', 'hover:bg-zinc-800');
+                piano.style.touchAction = 'none'; // Prevent scroll in glissando mode
+            }
+        }
+
+        // Logic for Glissando touch tracking
+        let activeGlissandoKey = null;
+
+        function handleGlissandoTouch(e) {
+            if (currentTouchMode !== 'glissando') return;
+            e.preventDefault(); // Stop scrolling completely in glissando mode
+
+            const touch = e.touches[0];
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+
+            if (element && (element.classList.contains('white-key') || element.classList.contains('black-key'))) {
+                // If it's a new key, play it
+                if (element !== activeGlissandoKey) {
+                    activeGlissandoKey = element;
+                    // Trigger the glissando event
+                    element.dispatchEvent(new CustomEvent('glissando-play'));
+                }
+            } else if (element && element.closest('.white-key, .black-key')) {
+                const keyEl = element.closest('.white-key, .black-key');
+                if (keyEl !== activeGlissandoKey) {
+                    activeGlissandoKey = keyEl;
+                    keyEl.dispatchEvent(new CustomEvent('glissando-play'));
+                }
+            }
+        }
+
+        function handleGlissandoEnd() {
+            activeGlissandoKey = null;
+        }
 
         function playPianoKey(keyData, keyElement) {
             // Play sound
@@ -977,7 +1063,84 @@
                 });
             }
             
-            console.log('%c[Piano Frequency] App initialized successfully. C4-C6 piano ready.', 'color:#64748b');
+            console.log('%c[Piano Frequency] App initialized successfully. C2-C8 piano ready.', 'color:#64748b');
+        }
+
+        // --- PWA & Fullscreen logic ---
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('ServiceWorker registered:', reg.scope))
+                    .catch(err => console.log('ServiceWorker error:', err));
+            });
+        }
+
+        // Handle Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBtn = document.getElementById('install-btn');
+            installBtn.classList.remove('hidden');
+            installBtn.classList.add('flex');
+
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        installBtn.classList.add('hidden');
+                        installBtn.classList.remove('flex');
+                    }
+                    deferredPrompt = null;
+                }
+            });
+        });
+
+        // Fullscreen Toggle
+        function toggleFullScreen() {
+            if (!document.fullscreenElement &&    // alternative standard method
+                !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {  // current working methods
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                    document.documentElement.msRequestFullscreen();
+                } else if (document.documentElement.mozRequestFullScreen) {
+                    document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        }
+
+        // Update Fullscreen Icon based on state
+        document.addEventListener('fullscreenchange', updateFullscreenIcon);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+        document.addEventListener('mozfullscreenchange', updateFullscreenIcon);
+        document.addEventListener('MSFullscreenChange', updateFullscreenIcon);
+
+        function updateFullscreenIcon() {
+            const btn = document.getElementById('fullscreen-btn');
+            const icon = btn.querySelector('i');
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+                icon.classList.remove('fa-expand');
+                icon.classList.add('fa-compress');
+            } else {
+                icon.classList.remove('fa-compress');
+                icon.classList.add('fa-expand');
+            }
         }
 
         // --- PWA & Fullscreen logic ---
