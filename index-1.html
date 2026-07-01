@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frequency Piano • keyboard2543</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+        
+        :root {
+            --accent: #6366f1;
+        }
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .title-font {
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .piano-container {
+            background: linear-gradient(#18181b, #27251f);
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4),
+                        inset 0 1px 0 0 rgb(255 255 255 / 0.1);
+            border: 1px solid #3f3a2e;
+        }
+
+        .piano {
+            display: flex;
+            position: relative;
+            height: 240px;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .white-key {
+            width: 52px;
+            height: 100%;
+            background: linear-gradient(to bottom, #f8fafc 0%, #e2e8f0 100%);
+            border: 1px solid #64748b;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2),
+                        inset 0 2px 4px 0 rgb(255 255 255 / 0.9),
+                        inset 0 -2px 4px 0 rgb(148 163 184 / 0.3);
+            position: relative;
+            cursor: pointer;
+            transition: all 0.06s cubic-bezier(0.23, 1.0, 0.32, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding-bottom: 10px;
+            z-index: 1;
+            flex-shrink: 0;
+        }
+
+        .white-key:active,
+        .white-key.active {
+            background: linear-gradient(to bottom, #bae6fd 0%, #7dd3fc 100%);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.15),
+                        inset 0 1px 3px 0 rgb(255 255 255 / 0.6);
+            transform: translateY(3px);
+        }
+
+        .black-key {
+            width: 30px;
+            height: 58%;
+            background: linear-gradient(to bottom, #1e2937 0%, #0f172a 100%);
+            border: 1px solid #475569;
+            border-radius: 0 0 5px 5px;
+            position: absolute;
+            top: 0;
+            z-index: 20;
+            cursor: pointer;
+            box-shadow: 0 10px 10px -3px rgb(0 0 0 / 0.4),
+                        inset 0 2px 3px 0 rgb(148 163 184 / 0.2);
+            transition: all 0.06s cubic-bezier(0.23, 1.0, 0.32, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding-bottom: 6px;
+            color: white;
+        }
+
+        .black-key:active,
+        .black-key.active {
+            background: linear-gradient(to bottom, #334155 0%, #1e2937 100%);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+            transform: translateY(2px);
+        }
+
+        .key-label {
+            font-size: 10px;
+            line-height: 1;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .white-key .key-label {
+            color: #334155;
+        }
+
+        .black-key .key-label {
+            color: #cbd5e1;
+        }
+
+        .freq-label {
+            font-size: 8.5px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            opacity: 0.75;
+            margin-top: 1px;
+            pointer-events: none;
+        }
+
+        .section {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .mode-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .mode-btn.active {
+            background-color: #6366f1;
+            color: white;
+            box-shadow: 0 10px 15px -3px rgb(99 102 241 / 0.3);
+        }
+
+        .now-playing {
+            animation: fadeInScale 0.2s ease forwards;
+        }
+
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .piano-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #475569 #1f2937;
+        }
+
+        .music-note {
+            animation: noteFloat 1.5s ease forwards;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-lg sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <div class="w-11 h-11 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-music text-white text-3xl"></i>
+                </div>
+                <div>
+                    <h1 class="title-font text-3xl font-semibold tracking-tighter">Frequency Piano</h1>
+                    <p class="text-[10px] text-zinc-500 -mt-1">keyboard2543 • ความถี่เปียโน</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-x-3">
+                <!-- Language Switcher -->
+                <div class="relative">
+                    <select id="language-select" 
+                            onchange="setLanguage(this.value)"
+                            class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-sm rounded-2xl px-3 py-1.5 pr-8 appearance-none cursor-pointer focus:outline-none focus:border-indigo-500 hover:border-zinc-600">
+                        <option value="th">🇹🇭 ไทย</option>
+                        <option value="en">🇬🇧 English</option>
+                        <option value="ja">🇯🇵 日本語</option>
+                        <option value="zh">🇨🇳 中文</option>
+                    </select>
+                    <i class="fa-solid fa-globe absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none text-xs"></i>
+                </div>
+
+                <div class="hidden sm:flex items-center gap-x-2 text-xs px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-3xl">
+                    <div class="flex items-center gap-x-1.5">
+                        <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                        <span class="text-emerald-400 text-xs font-medium">A4 = 440 Hz</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-5xl mx-auto w-full px-4 pt-6 pb-10">
+        <!-- Mode Switcher -->
+        <div class="flex justify-center mb-6">
+            <div class="inline-flex bg-zinc-900 border border-zinc-800 p-1 rounded-3xl shadow-inner">
+                <button onclick="switchMode('piano')" 
+                        id="btn-piano"
+                        class="mode-btn active flex items-center gap-x-2 px-6 py-2.5 text-sm font-semibold rounded-[22px] bg-indigo-600 text-white shadow-lg">
+                    <i class="fa-solid fa-piano-keyboard"></i>
+                    <span>โหมดกดเปียโน</span>
+                </button>
+                <button onclick="switchMode('frequency')" 
+                        id="btn-frequency"
+                        class="mode-btn flex items-center gap-x-2 px-6 py-2.5 text-sm font-semibold rounded-[22px] text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800">
+                    <i class="fa-solid fa-sliders-h"></i>
+                    <span>โหมดกำหนดความถี่</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- PIANO MODE -->
+        <div id="piano-mode" class="section">
+            <div class="max-w-4xl mx-auto">
+                <!-- Status -->
+                <div class="flex items-center justify-between mb-3 px-1">
+                    <div>
+                        <h2 class="font-semibold text-xl tracking-tight">กดปุ่มบนคีย์บอร์ดเปียโน</h2>
+                        <p class="text-zinc-400 text-sm">แต่ละปุ่มแสดงโน้ตและความถี่ (Hz)</p>
+                    </div>
+                    <div id="now-playing-piano" 
+                         class="hidden items-center gap-x-2 bg-zinc-900 border border-zinc-700 px-4 py-1.5 rounded-3xl text-sm">
+                        <i class="fa-solid fa-play text-emerald-400"></i>
+                        <span id="now-playing-text" class="font-mono text-emerald-300"></span>
+                    </div>
+                </div>
+
+                <!-- Piano Keyboard -->
+                <div class="piano-container rounded-3xl p-5 shadow-2xl">
+                    <div id="keyboard" 
+                         class="piano mx-auto piano-scroll overflow-x-auto flex items-end border border-zinc-700 rounded-2xl bg-zinc-950 p-2 shadow-inner"
+                         style="max-width: 100%; scrollbar-width: thin;">
+                        <!-- Keys generated by JS -->
+                    </div>
+                    <div class="flex justify-between items-center mt-3 px-2 text-[10px] text-zinc-500">
+                        <div class="flex items-center gap-x-1">
+                            <i class="fa-solid fa-info-circle"></i>
+                            <span>เลื่อนซ้ายขวาเพื่อดูคีย์เพิ่มเติม (บนมือถือ)</span>
+                        </div>
+                        <div class="font-mono hidden sm:block">C4 — C6</div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-center">
+                    <p class="text-xs text-zinc-500">แตะปุ่มเพื่อเล่นเสียง • ความถี่คำนวณจาก A4 = 440 Hz</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- FREQUENCY MODE -->
+        <div id="frequency-mode" class="section hidden">
+            <div class="max-w-md mx-auto">
+                <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-xl">
+                    <div class="text-center mb-6">
+                        <h2 class="font-semibold text-2xl tracking-tight">กำหนดความถี่เอง</h2>
+                        <p class="text-zinc-400 text-sm mt-1">ป้อนหรือเลื่อนเพื่อปรับความถี่ แล้วกดเล่น</p>
+                    </div>
+
+                    <!-- Frequency Display -->
+                    <div class="mb-5">
+                        <div class="flex justify-center items-baseline gap-x-2 mb-2">
+                            <input type="number" id="freq-input" 
+                                   class="bg-zinc-950 border border-zinc-700 focus:border-indigo-500 text-center text-6xl font-semibold font-mono w-48 rounded-2xl py-3 outline-none"
+                                   value="440" step="0.01" min="20" max="20000">
+                            <div class="text-3xl font-medium text-zinc-400">Hz</div>
+                        </div>
+                        
+                        <!-- Slider -->
+                        <div class="px-1">
+                            <input type="range" id="freq-slider" 
+                                   class="w-full accent-indigo-500" 
+                                   min="20" max="4000" step="0.1" value="440">
+                            <div class="flex justify-between text-[10px] text-zinc-500 px-0.5 mt-0.5">
+                                <div>20 Hz</div>
+                                <div>4 kHz</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Presets -->
+                    <div class="mb-6">
+                        <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 px-1">Presets</div>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button onclick="setFrequency(261.63)" 
+                                    class="preset-btn text-xs py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl transition-colors">C4<br><span class="font-mono text-[10px]">261.63</span></button>
+                            <button onclick="setFrequency(329.63)" 
+                                    class="preset-btn text-xs py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl transition-colors">E4<br><span class="font-mono text-[10px]">329.63</span></button>
+                            <button onclick="setFrequency(392.00)" 
+                                    class="preset-btn text-xs py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl transition-colors">G4<br><span class="font-mono text-[10px]">392.00</span></button>
+                            <button onclick="setFrequency(440.00)" 
+                                    class="preset-btn text-xs py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl transition-colors">A4<br><span class="font-mono text-[10px]">440.00</span></button>
+                            <button onclick="setFrequency(523.25)" 
+                                    class="preset-btn text-xs py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl transition-colors">C5<br><span class="font-mono text-[10px]">523.25</span></button>
+                            <button onclick="setFrequency(659.25)" 
+                                    class="preset-btn text-xs py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl transition-colors">E5<br><span class="font-mono text-[10px]">659.25</span></button>
+                            <button onclick="setFrequency(783.99)" 
+                                    class="preset-btn text-xs py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl transition-colors">G5<br><span class="font-mono text-[10px]">783.99</span></button>
+                            <button onclick="setFrequency(1046.50)" 
+                                    class="preset-btn text-xs py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-2xl transition-colors">C6<br><span class="font-mono text-[10px]">1046.50</span></button>
+                        </div>
+                    </div>
+
+                    <!-- Play Button -->
+                    <button id="freq-play-btn"
+                            onclick="toggleFrequencyPlay()"
+                            class="w-full flex items-center justify-center gap-x-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 transition-all text-white font-bold text-xl py-4 rounded-3xl shadow-lg shadow-emerald-600/30">
+                        <i class="fa-solid fa-play fa-fw" id="play-icon"></i>
+                        <span id="play-text">เล่นเสียง</span>
+                    </button>
+
+                    <!-- Status -->
+                    <div id="freq-status" class="hidden mt-4 text-center">
+                        <div class="inline-flex items-center gap-x-2 bg-emerald-900/30 text-emerald-400 text-sm px-4 py-1.5 rounded-3xl border border-emerald-800">
+                            <i class="fa-solid fa-volume-up animate-pulse"></i>
+                            <span id="freq-status-text" class="font-mono font-medium"></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 text-center text-[10px] text-zinc-500">
+                        เสียงจะอัปเดตแบบเรียลไทม์เมื่อปรับความถี่ขณะกำลังเล่น
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="border-t border-zinc-800 py-4 text-center text-xs text-zinc-500">
+        <div class="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-x-4 gap-y-1">
+            <div>สร้างด้วย Web Audio API • ความถี่มาตรฐาน A4 = 440 Hz</div>
+            <div class="hidden sm:block">•</div>
+            <div>เหมาะสำหรับมือถือ (Full Screen)</div>
+        </div>
+    </footer>
+
+    <script>
+        // Tailwind script
+        function initTailwind() {
+            document.documentElement.style.setProperty('--accent', '#6366f1');
+        }
+
+        // Audio Context
+        let audioCtx = null;
+        let currentOsc = null;
+        let currentGain = null;
+        let isFreqPlaying = false;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioCtx;
+        }
+
+        // Play tone function (for piano keys - short duration)
+        function playTone(frequency, durationMs = 650, type = 'sine') {
+            const ctx = getAudioContext();
+            
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const filter = ctx.createBiquadFilter();
+            
+            osc.type = type;
+            osc.frequency.value = frequency;
+            
+            // Low pass filter for softer sound
+            filter.type = 'lowpass';
+            filter.frequency.value = 1800;
+            
+            // ADSR-like envelope
+            const now = ctx.currentTime;
+            gain.gain.value = 0.0001;
+            
+            // Attack
+            gain.gain.linearRampToValueAtTime(0.35, now + 0.025);
+            // Decay
+            gain.gain.linearRampToValueAtTime(0.22, now + 0.12);
+            // Release
+            gain.gain.linearRampToValueAtTime(0.0001, now + (durationMs / 1000));
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.start(now);
+            osc.stop(now + (durationMs / 1000) + 0.3);
+            
+            // Cleanup
+            setTimeout(() => {
+                try { osc.disconnect(); } catch(e) {}
+            }, durationMs + 600);
+        }
+
+        // Piano keys data (C4 to C6)
+        let pianoKeys = [];
+
+        function generatePianoKeys() {
+            pianoKeys = [];
+            const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            
+            for (let midi = 60; midi <= 84; midi++) { // C4 (60) to C6 (84)
+                const freq = 440 * Math.pow(2, (midi - 69) / 12);
+                const noteIndex = midi % 12;
+                const octave = Math.floor(midi / 12) - 1;
+                const noteName = noteNames[noteIndex] + octave;
+                const isBlack = [1, 3, 6, 8, 10].includes(noteIndex);
+                
+                pianoKeys.push({
+                    midi: midi,
+                    freq: parseFloat(freq.toFixed(2)),
+                    noteName: noteName,
+                    isBlack: isBlack
+                });
+            }
+        }
+
+        // Render piano keyboard
+        function renderPianoKeyboard() {
+            const container = document.getElementById('keyboard');
+            container.innerHTML = '';
+            container.style.position = 'relative';
+            container.style.height = '240px';
+            
+            let currentLeft = 8; // start padding
+            const whiteWidth = 52;
+            const blackWidth = 30;
+            
+            pianoKeys.forEach(key => {
+                if (!key.isBlack) {
+                    // White key
+                    const keyEl = document.createElement('div');
+                    keyEl.className = 'white-key';
+                    keyEl.style.width = whiteWidth + 'px';
+                    keyEl.style.marginRight = '1px';
+                    
+                    keyEl.innerHTML = `
+                        <div class="key-label w-full px-0.5">
+                            <div class="font-semibold text-sm tracking-tighter">${key.noteName}</div>
+                            <div class="freq-label">${key.freq}</div>
+                        </div>
+                    `;
+                    
+                    keyEl.addEventListener('click', () => {
+                        playPianoKey(key, keyEl);
+                    });
+                    
+                    // Touch support (better feedback)
+                    keyEl.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        playPianoKey(key, keyEl);
+                    }, { passive: false });
+                    
+                    container.appendChild(keyEl);
+                    currentLeft += whiteWidth + 1;
+                } else {
+                    // Black key - absolute positioned
+                    const keyEl = document.createElement('div');
+                    keyEl.className = 'black-key';
+                    keyEl.style.width = blackWidth + 'px';
+                    keyEl.style.left = (currentLeft - blackWidth / 2 - 0.5) + 'px';
+                    keyEl.style.height = '58%';
+                    
+                    keyEl.innerHTML = `
+                        <div class="key-label w-full px-0.5">
+                            <div class="font-semibold text-[10px] tracking-tighter">${key.noteName}</div>
+                            <div class="freq-label" style="font-size:7.5px">${key.freq}</div>
+                        </div>
+                    `;
+                    
+                    keyEl.addEventListener('click', () => {
+                        playPianoKey(key, keyEl);
+                    });
+                    
+                    keyEl.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        playPianoKey(key, keyEl);
+                    }, { passive: false });
+                    
+                    container.appendChild(keyEl);
+                    // Do NOT advance currentLeft for black keys
+                }
+            });
+            
+            // Set container width to fit all
+            const totalWidth = currentLeft + 8;
+            container.style.minWidth = totalWidth + 'px';
+        }
+
+        let lastPlayedKeyEl = null;
+
+        function playPianoKey(keyData, keyElement) {
+            // Play sound
+            playTone(keyData.freq, 680, 'sine');
+            
+            // Visual feedback
+            if (lastPlayedKeyEl) {
+                lastPlayedKeyEl.classList.remove('active');
+            }
+            keyElement.classList.add('active');
+            lastPlayedKeyEl = keyElement;
+            
+            // Update now playing display
+            const nowPlaying = document.getElementById('now-playing-piano');
+            const textEl = document.getElementById('now-playing-text');
+            const t = translations[currentLang];
+            
+            textEl.innerHTML = `<span class="text-emerald-400">${t.nowPlaying}:</span> ${keyData.noteName} <span class="text-emerald-400/70">•</span> ${keyData.freq} Hz`;
+            nowPlaying.style.display = 'flex';
+            nowPlaying.classList.remove('hidden');
+            
+            // Remove active state after short time
+            setTimeout(() => {
+                if (keyElement === lastPlayedKeyEl) {
+                    keyElement.classList.remove('active');
+                }
+            }, 280);
+            
+            // Hide now playing after some time
+            setTimeout(() => {
+                if (nowPlaying.style.display !== 'none') {
+                    nowPlaying.style.transition = 'opacity 0.4s';
+                    nowPlaying.style.opacity = '0';
+                    setTimeout(() => {
+                        nowPlaying.style.opacity = '1';
+                        nowPlaying.style.transition = '';
+                        nowPlaying.style.display = 'none';
+                        nowPlaying.classList.add('hidden');
+                    }, 400);
+                }
+            }, 2200);
+        }
+
+        // Frequency Mode Functions
+        function setFrequency(freq) {
+            const input = document.getElementById('freq-input');
+            const slider = document.getElementById('freq-slider');
+            
+            input.value = freq.toFixed(2);
+            slider.value = Math.min(Math.max(freq, 20), 4000);
+            
+            // If currently playing, update live
+            if (isFreqPlaying && currentOsc) {
+                currentOsc.frequency.value = freq;
+                updateFreqStatus(freq);
+            }
+        }
+
+        function updateFreqStatus(freq) {
+            const status = document.getElementById('freq-status');
+            const text = document.getElementById('freq-status-text');
+            const t = translations[currentLang];
+            text.textContent = `${t.playingStatus}: ${parseFloat(freq).toFixed(2)} Hz`;
+            status.style.display = 'block';
+            status.classList.remove('hidden');
+        }
+
+        function toggleFrequencyPlay() {
+            const btn = document.getElementById('freq-play-btn');
+            const icon = document.getElementById('play-icon');
+            const text = document.getElementById('play-text');
+            const input = document.getElementById('freq-input');
+            const status = document.getElementById('freq-status');
+            
+            const freq = parseFloat(input.value);
+            if (!freq || freq < 20 || freq > 20000) {
+                alert('กรุณาป้อนความถี่ระหว่าง 20 - 20000 Hz');
+                return;
+            }
+            
+            const ctx = getAudioContext();
+            
+            if (!isFreqPlaying) {
+                // START playing
+                if (currentOsc) {
+                    try { currentOsc.stop(); } catch(e) {}
+                }
+                
+                currentOsc = ctx.createOscillator();
+                currentGain = ctx.createGain();
+                const filter = ctx.createBiquadFilter();
+                
+                currentOsc.type = 'sine';
+                currentOsc.frequency.value = freq;
+                
+                filter.type = 'lowpass';
+                filter.frequency.value = 2200;
+                
+                currentGain.gain.value = 0.4;
+                
+                currentOsc.connect(filter);
+                filter.connect(currentGain);
+                currentGain.connect(ctx.destination);
+                
+                currentOsc.start();
+                
+                isFreqPlaying = true;
+                
+                // Update UI
+                btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+                btn.classList.add('bg-rose-600', 'hover:bg-rose-500');
+                icon.classList.remove('fa-play');
+                icon.classList.add('fa-stop');
+                const t2 = translations[currentLang];
+                text.textContent = t2.stopSound;
+                
+                updateFreqStatus(freq);
+                
+                // Live update listener
+                setupLiveUpdate();
+            } else {
+                // STOP playing
+                stopFrequencyTone();
+            }
+        }
+
+        function setupLiveUpdate() {
+            const input = document.getElementById('freq-input');
+            const slider = document.getElementById('freq-slider');
+            
+            const updateFreq = () => {
+                if (isFreqPlaying && currentOsc) {
+                    const newFreq = parseFloat(input.value);
+                    if (newFreq >= 20 && newFreq <= 20000) {
+                        currentOsc.frequency.value = newFreq;
+                        updateFreqStatus(newFreq);
+                    }
+                }
+            };
+            
+            // Remove old listeners by cloning (simple way)
+            const newInput = input.cloneNode(true);
+            input.parentNode.replaceChild(newInput, input);
+            newInput.addEventListener('input', updateFreq);
+            
+            const newSlider = slider.cloneNode(true);
+            slider.parentNode.replaceChild(newSlider, slider);
+            newSlider.addEventListener('input', () => {
+                newInput.value = newSlider.value;
+                updateFreq();
+            });
+            
+            // Re-attach number input sync to slider
+            newInput.addEventListener('input', () => {
+                newSlider.value = Math.min(Math.max(parseFloat(newInput.value) || 20, 20), 4000);
+            });
+        }
+
+        function stopFrequencyTone() {
+            const btn = document.getElementById('freq-play-btn');
+            const icon = document.getElementById('play-icon');
+            const text = document.getElementById('play-text');
+            const status = document.getElementById('freq-status');
+            
+            if (currentGain && audioCtx) {
+                const now = audioCtx.currentTime;
+                currentGain.gain.cancelScheduledValues(now);
+                currentGain.gain.linearRampToValueAtTime(0.0001, now + 0.35);
+            }
+            
+            setTimeout(() => {
+                if (currentOsc) {
+                    try { currentOsc.stop(); } catch(e) {}
+                    currentOsc = null;
+                }
+                currentGain = null;
+            }, 450);
+            
+            isFreqPlaying = false;
+            
+            // Reset UI
+            btn.classList.remove('bg-rose-600', 'hover:bg-rose-500');
+            btn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+            icon.classList.remove('fa-stop');
+            icon.classList.add('fa-play');
+            const t3 = translations[currentLang];
+            text.textContent = t3.playSound;
+            
+            status.style.transition = 'opacity 0.3s';
+            status.style.opacity = '0';
+            setTimeout(() => {
+                status.style.opacity = '1';
+                status.style.transition = '';
+                status.style.display = 'none';
+                status.classList.add('hidden');
+            }, 300);
+        }
+
+        // Sync input and slider initially
+        function initFrequencyControls() {
+            const input = document.getElementById('freq-input');
+            const slider = document.getElementById('freq-slider');
+            
+            // Initial sync
+            slider.value = input.value;
+            
+            input.addEventListener('input', () => {
+                let val = parseFloat(input.value);
+                if (val > 4000) val = 4000;
+                if (val < 20) val = 20;
+                slider.value = val;
+            });
+            
+            slider.addEventListener('input', () => {
+                input.value = parseFloat(slider.value).toFixed(2);
+            });
+            
+            // Allow Enter key to play
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    if (!isFreqPlaying) {
+                        toggleFrequencyPlay();
+                    }
+                }
+            });
+            
+            // Click on input focuses and selects
+            input.addEventListener('focus', () => {
+                input.select();
+            });
+        }
+
+        // Mode switching
+        function switchMode(mode) {
+            const pianoSection = document.getElementById('piano-mode');
+            const freqSection = document.getElementById('frequency-mode');
+            const btnPiano = document.getElementById('btn-piano');
+            const btnFreq = document.getElementById('btn-frequency');
+            
+            if (mode === 'piano') {
+                pianoSection.classList.remove('hidden');
+                freqSection.classList.add('hidden');
+                
+                btnPiano.classList.add('active', 'bg-indigo-600', 'text-white');
+                btnPiano.classList.remove('text-zinc-400', 'hover:bg-zinc-800');
+                
+                btnFreq.classList.remove('active', 'bg-indigo-600', 'text-white');
+                btnFreq.classList.add('text-zinc-400', 'hover:bg-zinc-800');
+                
+                // Stop frequency if playing when switching
+                if (isFreqPlaying) {
+                    stopFrequencyTone();
+                }
+            } else {
+                pianoSection.classList.add('hidden');
+                freqSection.classList.remove('hidden');
+                
+                btnFreq.classList.add('active', 'bg-indigo-600', 'text-white');
+                btnFreq.classList.remove('text-zinc-400', 'hover:bg-zinc-800');
+                
+                btnPiano.classList.remove('active', 'bg-indigo-600', 'text-white');
+                btnPiano.classList.add('text-zinc-400', 'hover:bg-zinc-800');
+            }
+        }
+
+        // ==================== MULTI-LANGUAGE SUPPORT ====================
+        const translations = {
+            th: {
+                // Header
+                headerSubtitle: "keyboard2543 • ความถี่เปียโน",
+                
+                // Mode buttons
+                modePiano: "โหมดกดเปียโน",
+                modeFrequency: "โหมดกำหนดความถี่",
+                
+                // Piano Mode
+                pianoTitle: "กดปุ่มบนคีย์บอร์ดเปียโน",
+                pianoDesc: "แต่ละปุ่มแสดงโน้ตและความถี่ (Hz)",
+                pianoHint: "เลื่อนซ้ายขวาเพื่อดูคีย์เพิ่มเติม (บนมือถือ)",
+                nowPlaying: "กำลังเล่น",
+                
+                // Frequency Mode
+                freqTitle: "กำหนดความถี่เอง",
+                freqDesc: "ป้อนหรือปรับความถี่เพื่อสร้างเสียง",
+                presets: "Presets",
+                playSound: "เล่นเสียง",
+                stopSound: "หยุดเสียง",
+                playingStatus: "กำลังเล่น",
+                liveUpdateHint: "เสียงจะอัปเดตแบบเรียลไทม์เมื่อปรับความถี่ขณะกำลังเล่น",
+                
+                // Footer
+                footer: "สร้างด้วย Web Audio API • ความถี่มาตรฐาน A4 = 440 Hz • เหมาะสำหรับมือถือ (Full Screen)"
+            },
+            en: {
+                headerSubtitle: "keyboard2543 • Piano & Frequency Tool",
+                modePiano: "Piano Mode",
+                modeFrequency: "Frequency Mode",
+                pianoTitle: "Press the piano keys",
+                pianoDesc: "Each key shows note name and frequency (Hz)",
+                pianoHint: "Scroll left/right to see more keys (on mobile)",
+                nowPlaying: "Now Playing",
+                freqTitle: "Set Frequency Manually",
+                freqDesc: "Enter or adjust frequency to generate sound",
+                presets: "Presets",
+                playSound: "Play Sound",
+                stopSound: "Stop Sound",
+                playingStatus: "Playing",
+                liveUpdateHint: "Sound updates in real-time when you change frequency while playing",
+                footer: "Built with Web Audio API • Standard A4 = 440 Hz • Mobile friendly (Full Screen)"
+            },
+            ja: {
+                headerSubtitle: "keyboard2543 • ピアノと周波数ツール",
+                modePiano: "ピアノモード",
+                modeFrequency: "周波数モード",
+                pianoTitle: "ピアノの鍵盤を押してください",
+                pianoDesc: "各キーに音名と周波数（Hz）が表示されます",
+                pianoHint: "左右にスクロールして他のキーを表示（モバイル）",
+                nowPlaying: "再生中",
+                freqTitle: "周波数を手動で設定",
+                freqDesc: "周波数を入力または調整して音を生成",
+                presets: "プリセット",
+                playSound: "音を再生",
+                stopSound: "音を停止",
+                playingStatus: "再生中",
+                liveUpdateHint: "再生中に周波数を変更するとリアルタイムで音が更新されます",
+                footer: "Web Audio APIで作成 • 基準 A4 = 440 Hz • モバイル対応（フルスクリーン）"
+            },
+            zh: {
+                headerSubtitle: "keyboard2543 • 钢琴与频率工具",
+                modePiano: "钢琴模式",
+                modeFrequency: "频率模式",
+                pianoTitle: "按下钢琴键",
+                pianoDesc: "每个键显示音符名称和频率（Hz）",
+                pianoHint: "左右滑动查看更多键（手机端）",
+                nowPlaying: "正在播放",
+                freqTitle: "手动设置频率",
+                freqDesc: "输入或调整频率以生成声音",
+                presets: "预设",
+                playSound: "播放声音",
+                stopSound: "停止声音",
+                playingStatus: "播放中",
+                liveUpdateHint: "播放时更改频率，声音会实时更新",
+                footer: "使用 Web Audio API 构建 • 标准 A4 = 440 Hz • 移动端友好（全屏）"
+            }
+        };
+
+        let currentLang = 'th';
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('preferredLang', lang);
+            updateLanguage();
+        }
+
+        function updateLanguage() {
+            const t = translations[currentLang];
+            if (!t) return;
+
+            // Header subtitle
+            const subtitle = document.querySelector('header p.text-\\[10px\\]');
+            if (subtitle) subtitle.textContent = t.headerSubtitle;
+
+            // Mode buttons
+            const btnPiano = document.getElementById('btn-piano');
+            const btnFreq = document.getElementById('btn-frequency');
+            if (btnPiano) btnPiano.innerHTML = `<i class="fa-solid fa-piano-keyboard"></i> <span>${t.modePiano}</span>`;
+            if (btnFreq) btnFreq.innerHTML = `<i class="fa-solid fa-sliders-h"></i> <span>${t.modeFrequency}</span>`;
+
+            // Piano Mode
+            const pianoTitleEl = document.querySelector('#piano-mode h2');
+            if (pianoTitleEl) pianoTitleEl.textContent = t.pianoTitle;
+            
+            const pianoDescEl = document.querySelector('#piano-mode p.text-zinc-400');
+            if (pianoDescEl) pianoDescEl.textContent = t.pianoDesc;
+            
+            const pianoHintEl = document.querySelector('#piano-mode .text-\\[10px\\]');
+            if (pianoHintEl) pianoHintEl.innerHTML = `<i class="fa-solid fa-info-circle"></i> <span>${t.pianoHint}</span>`;
+            
+            // Now playing label
+            const nowPlayingLabel = document.querySelector('#now-playing-piano span');
+            if (nowPlayingLabel && nowPlayingLabel.textContent.includes('Now Playing') || nowPlayingLabel.textContent.includes('กำลังเล่น')) {
+                // Will be updated dynamically when playing
+            }
+
+            // Frequency Mode
+            const freqTitleEl = document.querySelector('#frequency-mode h2');
+            if (freqTitleEl) freqTitleEl.textContent = t.freqTitle;
+            
+            const freqDescEl = document.querySelector('#frequency-mode p.mt-1');
+            if (freqDescEl) freqDescEl.textContent = t.freqDesc;
+            
+            const presetsLabel = document.querySelector('#frequency-mode .text-xs.uppercase');
+            if (presetsLabel) presetsLabel.textContent = t.presets;
+            
+            // Play button text (dynamic)
+            const playText = document.getElementById('play-text');
+            if (playText) {
+                playText.textContent = isFreqPlaying ? t.stopSound : t.playSound;
+            }
+            
+            // Live update hint
+            const hintEl = document.querySelector('#frequency-mode .text-\\[10px\\].text-zinc-500');
+            if (hintEl) hintEl.textContent = t.liveUpdateHint;
+            
+            // Footer
+            const footerEl = document.querySelector('footer div');
+            if (footerEl) footerEl.innerHTML = t.footer;
+        }
+
+        // Initialize everything
+        function initApp() {
+            initTailwind();
+            generatePianoKeys();
+            renderPianoKeyboard();
+            initFrequencyControls();
+            
+            // Load saved language or default to Thai
+            const savedLang = localStorage.getItem('preferredLang');
+            const langSelect = document.getElementById('language-select');
+            
+            if (savedLang && translations[savedLang]) {
+                currentLang = savedLang;
+                langSelect.value = savedLang;
+            } else {
+                langSelect.value = 'th';
+            }
+            updateLanguage();
+            
+            // Default to piano mode
+            document.getElementById('piano-mode').classList.remove('hidden');
+            document.getElementById('frequency-mode').classList.add('hidden');
+            
+            // Make sure first mode button is active
+            const btnPiano = document.getElementById('btn-piano');
+            btnPiano.classList.add('active', 'bg-indigo-600', 'text-white');
+            
+            // Bonus: Press "?" key to show help (optional)
+            document.addEventListener('keydown', (e) => {
+                if (e.key === '?' && document.getElementById('piano-mode').classList.contains('hidden') === false) {
+                    const now = document.getElementById('now-playing-piano');
+                    if (now.style.display === 'flex') {
+                        now.style.display = 'none';
+                    }
+                }
+            });
+            
+            // Mobile full screen hint (subtle)
+            if (window.innerWidth < 640) {
+                setTimeout(() => {
+                    const pianoContainer = document.querySelector('.piano-container');
+                    if (pianoContainer) {
+                        pianoContainer.style.boxShadow = '0 25px 50px -12px rgb(0 0 0 / 0.4), inset 0 1px 0 0 rgb(255 255 255 / 0.08)';
+                    }
+                }, 800);
+            }
+            
+            // Easter egg: click logo to play A4
+            const logo = document.querySelector('header .fa-music');
+            if (logo) {
+                logo.style.cursor = 'pointer';
+                logo.addEventListener('click', () => {
+                    const ctx = getAudioContext();
+                    playTone(440, 900, 'sine');
+                    
+                    // flash effect
+                    logo.style.transition = 'transform 0.1s';
+                    logo.style.transform = 'scale(1.3)';
+                    setTimeout(() => {
+                        logo.style.transform = 'scale(1)';
+                    }, 120);
+                });
+            }
+            
+            console.log('%c[Piano Frequency] App initialized successfully. C4-C6 piano ready.', 'color:#64748b');
+        }
+
+        // Boot app
+        window.onload = initApp;
+        
+        // Expose for debugging (optional)
+        window.PianoFreq = { setFrequency, switchMode };
+    </script>
+</body>
+</html>
