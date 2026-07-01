@@ -1,0 +1,17 @@
+{
+  "name": "Frequency Piano",
+  "short_name": "Freq Piano",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#18181b",
+  "description": "A web piano and frequency tool by keyboard2543",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
